@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Anggota</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; margin: 20px; }
+        .container { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 900px; margin: auto; }
+        h2 { color: #28a745; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #28a745; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .logout { background: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 4px; cursor: pointer; float: right; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button class="logout" onclick="logout()">Logout</button>
+        <h2>Data Pinjaman Saya</h2>
+        <p>Selamat datang, <b id="displayUser"></b></p>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th>Nama</th>
+                    <th>Judul Buku</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="tableContent">
+                <tr><td colspan="3">Memuat data...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // ✅ Tunda pengecekan sesi sedikit (untuk menghindari race condition)
+        setTimeout(() => {
+            const apiKey = sessionStorage.getItem("user_api_key");
+            const username = sessionStorage.getItem("session_user");
+
+            if (!apiKey || !username) {
+                // Redirect ke login
+                window.location.href = "login_user.html";
+                return;
+            }
+
+            document.getElementById("displayUser").innerText = username;
+            loadData();
+        }, 10);
+
+        async function loadData() {
+            try {
+                const apiKey = sessionStorage.getItem("user_api_key");
+                const username = sessionStorage.getItem("session_user");
+
+                const res = await fetch("http://127.0.0.1:3000/api/dashboardUser", {
+                    method: "GET",
+                    headers: {
+                        'x-api-key': apiKey,
+                        'user-session': username,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await res.json();
+                const tableBody = document.getElementById("tableContent");
+
+                if (res.ok) {
+                    if (data.length === 0) {
+                        tableBody.innerHTML = `<tr><td colspan="3" style="text-align:center;">Tidak ada data peminjaman.</td></tr>`;
+                    } else {
+                        tableBody.innerHTML = data.map(row => `
+                            <tr>
+                                <td>${row.nama || '-'}</td>
+                                <td>${row.judul || '-'}</td>
+                                <td><b>${row.status || '-'}</b></td>
+                            </tr>
+                        `).join('');
+                    }
+                } else {
+                    tableBody.innerHTML = `<tr><td colspan="3">Gagal memuat data: ${data.message || 'Error tidak diketahui'}</td></tr>`;
+                }
+            } catch (e) {
+                console.error("Load data error:", e);
+                document.getElementById("tableContent").innerHTML = 
+                    `<tr><td colspan="3">Error koneksi: ${e.message}</td></tr>`;
+            }
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = "index.html"; // atau index.html
+        }
+    </script>
+</body>
+</html>

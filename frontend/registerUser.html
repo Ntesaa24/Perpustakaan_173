@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daftar Anggota Baru</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .auth-box { background: white; padding: 30px; border-radius: 12px; width: 380px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); border-top: 5px solid #28a745; text-align: center; }
+        h2 { margin-top: 0; color: #333; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; font-size: 14px; text-align: left; }
+        input { padding: 12px; margin-bottom: 15px; width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; }
+        button { padding: 13px; cursor: pointer; border: none; border-radius: 6px; width: 100%; font-weight: bold; font-size: 15px; background: #28a745; color: white; transition: 0.3s; }
+        button:hover { background: #218838; }
+        button:disabled { background: #6c757d; cursor: not-allowed; } /* Style saat tombol loading */
+        .link { font-size: 0.85em; margin-top: 20px; display: block; color: #28a745; text-decoration: none; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="auth-box">
+    <h2>📝 Daftar Anggota</h2>
+    
+    <label>Nama Lengkap</label>
+    <input type="text" id="regNama" placeholder="Masukkan nama lengkap">
+
+    <label>Nomor Telepon</label>
+    <input type="text" id="regTelp" placeholder="Masukkan nomor HP">
+
+    <label>Alamat</label>
+    <input type="text" id="regAlamat" placeholder="Masukkan alamat">
+
+    <label>Username</label>
+    <input type="text" id="userAuth" placeholder="Pilih username">
+
+    <label>Password</label>
+    <input type="password" id="passAuth" placeholder="Pilih password">
+
+    <button onclick="handleRegister()" id="btnRegister">Buat Akun Sekarang</button>
+    
+    <a href="login_user.html" class="link">Sudah punya akun? Masuk</a>
+</div>
+
+<script>
+    async function handleRegister() {
+        const btn = document.getElementById("btnRegister");
+        
+        // Mengambil elemen secara aman
+        const nama = document.getElementById("regNama").value.trim();
+        const telp = document.getElementById("regTelp").value.trim();
+        const alamat = document.getElementById("regAlamat").value.trim();
+        const user = document.getElementById("userAuth").value.trim();
+        const pass = document.getElementById("passAuth").value.trim();
+
+        if (!nama || !user || !pass) {
+            return alert("Harap isi Nama, Username, dan Password!");
+        }
+
+        const payload = {
+            nama: nama,
+            telepon: telp,
+            alamat: alamat,
+            username: user,
+            password: pass
+        };
+
+        btn.disabled = true;
+        btn.innerText = "Memproses...";
+
+        try {
+            // Gunakan 127.0.0.1 jika localhost tidak merespon
+            const res = await fetch("http://127.0.0.1:3000/api/register-user", {
+                method: "POST",
+                headers: { 
+                    'x-api-key': 'rahasia123', 
+                    'Content-Type': "application/json" 
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.status === 201) {
+                alert("Pendaftaran Berhasil! Silakan Login.");
+                window.location.href = 'login_user.html';
+            } else {
+                const result = await res.json();
+                alert("Gagal: " + (result.message || "Terjadi kesalahan server"));
+            }
+        } catch (err) {
+            console.error("Error:", err);
+            alert("Gagal terhubung ke server. Pastikan Backend (node server.js) sudah dijalankan!");
+        } finally {
+            // PERBAIKAN: Set ke false agar bisa ditekan lagi jika gagal
+            btn.disabled = false;
+            btn.innerText = "Buat Akun Sekarang";
+        }
+    }
+</script>
+
+</body>
+</html>

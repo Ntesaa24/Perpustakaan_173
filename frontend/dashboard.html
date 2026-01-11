@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Perbaiki CDN Tailwind (versi browser resmi) -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
     <style>
         body { font-family: sans-serif; margin: 0; background-color: #f4f4f4; }
@@ -20,7 +21,6 @@
         .logout-btn { background: #dc3545 !important; }
 
         input { padding: 10px; margin-bottom: 10px; width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
-        /* button { padding: 10px 15px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px } */
         button:hover { opacity: 0.9; }
         
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: white; }
@@ -36,178 +36,240 @@
 </head>
 <body>
     <div class="p-4" id="main-content" style="display: none;">
-    <div class="flex justify-between items-center mb-8">
-        <div class="p-2 flex gap-2">
-            <div class="buku bg-blue-600 text-white p-2 rounded-md" onclick="openTab('buku')" id="btn-buku">Buku</div>
-            <div class="anggota bg-gray-400 text-white p-2 rounded-md" onclick="openTab('anggota')" id="btn-anggota">Anggota</div>
-            <div class="pinjam bg-gray-400 text-white p-2 rounded-md" onclick="openTab('pinjam')" id="btn-pinjam">Pinjam</div>
+        <div class="flex justify-between items-center mb-8">
+            <div class="p-2 flex gap-2">
+                <div class="buku bg-blue-600 text-white p-2 rounded-md" onclick="openTab('buku')" id="btn-buku">Buku</div>
+                <div class="anggota bg-gray-400 text-white p-2 rounded-md" onclick="openTab('anggota')" id="btn-anggota">Anggota</div>
+                <div class="pinjam bg-gray-400 text-white p-2 rounded-md" onclick="openTab('pinjam')" id="btn-pinjam">Pinjam</div>
+            </div>
+            <div id="name"></div>
+            <button class="bg-red-600 text-white rounded-md px-5 h-10" onclick="logout()">Logout</button>
         </div>
-        <div id="name">
 
+        <div id="buku" class="section active">
+            <h3>Input Buku Baru</h3>
+            <input type="text" id="judulBuku" placeholder="Judul Buku">
+            <input type="number" id="stokBuku" placeholder="Jumlah Stok">
+            <button onclick="inputBuku()" class="bg-blue-600 text-white p-2 rounded-md" style="width: auto;">Simpan Buku</button> 
+            <table id="tabelBuku">
+                <thead><tr><th>ID</th><th>Judul</th><th>Stok</th><th>Aksi</th></tr></thead>
+                <tbody></tbody>
+            </table>
         </div>
-        <button class="bg-red-600 text-white rounded-md px-5 h-10" onclick="logout()">Logout</button>
+
+        <div id="anggota" class="section">
+            <h3>Input Anggota Baru</h3>
+            <input type="text" id="namaAnggota" placeholder="Nama Lengkap">
+            <input type="text" id="alamatAnggota" placeholder="Alamat">
+            <input type="text" id="telpAnggota" placeholder="Nomor Telepon">
+            <button class="bg-blue-600 text-white p-2 rounded-md" onclick="inputAnggota()" style="width: auto;">Simpan Anggota</button>
+            <table id="tabelAnggota">
+                <thead><tr><th>ID</th><th>Nama</th><th>Telepon</th><th>Alamat</th><th>Aksi</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <div id="pinjam" class="section">
+            <h3>Transaksi Baru</h3>
+            <input type="number" id="idBukuPinjam" placeholder="ID Buku">
+            <input type="number" id="idAnggotaPinjam" placeholder="ID Anggota">
+            <input type="date" id="tglPinjam">
+            <button class="bg-blue-600 text-white p-2 rounded-md" onclick="inputPeminjaman()" style="width: auto;">Proses Pinjam</button>
+            <table id="tabelPeminjaman">
+                <thead><tr><th>ID</th><th>Buku</th><th>Peminjam</th><th>Tgl Pinjam</th><th>Status</th><th>Aksi</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
     </div>
 
-    <div id="buku" class="section active">
-        <h3>Input Buku Baru</h3>
-        <input type="text" id="judulBuku" placeholder="Judul Buku">
-        <input type="number" id="stokBuku" placeholder="Jumlah Stok">
-        <button onclick="inputBuku()" class="bg-blue-600 text-white p-2 rounded-md" style="width: auto;">Simpan Buku</button> 
-        <table id="tabelBuku">
-            <thead><tr><th>ID</th><th>Judul</th><th>Stok</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <script>
+        const BASE_URL = 'http://localhost:3000/api';
+        const HEADERS = { 'Content-Type': 'application/json', 'x-api-key': 'rahasia123' };
 
-    <div id="anggota" class="section">
-        <h3>Input Anggota Baru</h3>
-        <input type="text" id="namaAnggota" placeholder="Nama Lengkap">
-        <input type="text" id="alamatAnggota" placeholder="Alamat">
-        <input type="text" id="telpAnggota" placeholder="Nomor Telepon">
-        <button class="bg-blue-600 text-white p-2 rounded-md" onclick="inputAnggota()" style="width: auto;">Simpan Anggota</button>
-        <table id="tabelAnggota">
-            <thead><tr><th>ID</th><th>Nama</th><th>Telepon</th><th>Alamat</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-
-    <div id="pinjam" class="section">
-        <h3>Transaksi Baru</h3>
-        <input type="number" id="idBukuPinjam" placeholder="ID Buku">
-        <input type="number" id="idAnggotaPinjam" placeholder="ID Anggota">
-        <input type="date" id="tglPinjam">
-        <button class="bg-blue-600 text-white p-2 rounded-md" onclick="inputPeminjaman()" style="width: auto;">Proses Pinjam</button>
-        <table id="tabelPeminjaman">
-            <thead><tr><th>ID</th><th>Buku</th><th>Peminjam</th><th>Tgl Pinjam</th><th>Status</th><th>Aksi</th></tr></thead>
-            <tbody></tbody>
-        </table>
-    </div>
-</div>
-<script>
-    const BASE_URL = 'http://localhost:3000/api';
-    const HEADERS = { 'Content-Type': 'application/json', 'x-api-key': 'rahasia123' };
-    function openTab(tabName) {
-        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
-        document.getElementById(tabName).classList.add('active');
-        document.getElementById('btn-' + tabName).classList.add('active');
-    }
-
-    function showDashboard() {
-        document.getElementById('main-content').style.display = 'block';
-        loadBuku(); loadAnggota(); loadPeminjaman();
-    }
-
-    function logout() {
-        sessionStorage.clear();
-        window.location.href = "/Perpustakaan/frontend/login.html"
-    }
-
-    async function prosesKembali(id) {
-        await fetch(`${BASE_URL}/pengembalian`, { 
-            method: 'POST', 
-            headers: HEADERS, 
-            body: JSON.stringify({ id_peminjaman: id }) 
-        });
-        loadPeminjaman();
-    }
-
-    async function loadBuku() {
-        const res = await fetch(`${BASE_URL}/buku`, { headers: HEADERS });
-        const data = await res.json();
-        document.querySelector('#tabelBuku tbody').innerHTML = data.map(b => 
-            `<tr><td>${b.id}</td><td>${b.judul}</td><td>${b.stok}</td></tr>`).join('');
-    }
-
-    async function loadAnggota() {
-        const res = await fetch(`${BASE_URL}/anggota`, { headers: HEADERS });
-        const data = await res.json();
-        document.querySelector('#tabelAnggota tbody').innerHTML = data.map(a => 
-            `<tr><td>${a.id}</td><td>${a.nama}</td><td>${a.telepon}</td><td>${a.alamat || '-'}</td></tr>`).join('');
-    }
-
-    async function loadPeminjaman() {
-        const res = await fetch(`${BASE_URL}/peminjaman`, { headers: HEADERS });
-        const data = await res.json();
-        const tbody = document.querySelector('#tabelPeminjaman tbody');
-        tbody.innerHTML = data.map(p => `
-            <tr>
-                <td>${p.id}</td>
-                <td>${p.judul_buku}</td>
-                <td>${p.nama_anggota}</td>
-                <td>${p.tanggal_pinjam}</td>
-                <td><span class="p-2 rounded-md ${p.status === 'Dipinjam' ? 'status-dipinjam' : 'status-kembali'}">${p.status}</span></td>
-                <td>${p.status === 'Dipinjam' ? `<button onclick="prosesKembali(${p.id})" class="bg-orange-600 p-2 text-white p-2 rounded-md" style="background:orange; width:auto;">Kembali</button>` : 'Selesai'}</td>
-            </tr>`).join('');
-    }
-
-    async function inputBuku() {
-        const judul = document.getElementById('judulBuku').value;
-        const stok = document.getElementById('stokBuku').value;
-        await fetch(`${BASE_URL}/buku`, { method: 'POST', headers: HEADERS, body: JSON.stringify({ judul, stok }) });
-        alert('Buku Disimpan'); loadBuku();
-    }
-
-    async function inputAnggota() {
-        const body = {
-            nama: document.getElementById('namaAnggota').value,
-            alamat: document.getElementById('alamatAnggota').value,
-            telepon: document.getElementById('telpAnggota').value
-        };
-        const res = await fetch(`${BASE_URL}/anggota`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
-        if(res.ok) { alert('Anggota Disimpan'); loadAnggota(); }
-    }
-
-    async function inputPeminjaman() {
-        const body = { 
-            id_buku: document.getElementById('idBukuPinjam').value, 
-            id_anggota: document.getElementById('idAnggotaPinjam').value, 
-            tanggal_pinjam: document.getElementById('tglPinjam').value 
-        };
-        await fetch(`${BASE_URL}/peminjaman`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
-        loadPeminjaman();
-    }
-
-    const btnBuku = document.getElementsByClassName('buku')[0]
-    const btnAnggota = document.getElementsByClassName('anggota')[0]
-    const btnPinjam = document.getElementsByClassName('pinjam')[0]
-
-    btnBuku.addEventListener('click', () => {
-        btnBuku.classList = []
-        btnAnggota.classList = []
-        btnPinjam.classList = []
-        btnBuku.setAttribute("class","buku bg-blue-600 text-white p-2 rounded-md")
-        btnAnggota.setAttribute("class","anggota bg-gray-400 text-white p-2 rounded-md")
-        btnPinjam.setAttribute("class","pinjam bg-gray-400 text-white p-2 rounded-md")
-    })
-
-    btnAnggota.addEventListener('click', () => {
-        btnBuku.classList = []
-        btnAnggota.classList = []
-        btnPinjam.classList = []
-        btnAnggota.setAttribute("class","anggota bg-blue-600 text-white p-2 rounded-md")
-        btnBuku.setAttribute("class","buku bg-gray-400 text-white p-2 rounded-md")
-        btnPinjam.setAttribute("class","pinjam bg-gray-400 text-white p-2 rounded-md")
-    })
-
-    btnPinjam.addEventListener('click', () => {
-        btnBuku.classList = []
-        btnAnggota.classList = []
-        btnPinjam.classList = []
-        btnPinjam.setAttribute("class","pinjam bg-blue-600 text-white p-2 rounded-md")
-        btnAnggota.setAttribute("class","anggota bg-gray-400 text-white p-2 rounded-md")
-        btnBuku.setAttribute("class","buku bg-gray-400 text-white p-2 rounded-md")
-    })
-
-    window.onload = () => {
-        if(sessionStorage.getItem('session_petugas')) {
-            showDashboard() 
-            console.log(window.localStorage.getItem("session_petugas"))
-            document.getElementById("name").innerText = "Halo " + sessionStorage.getItem('session_petugas')
+        function openTab(tabName) {
+            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById(tabName).classList.add('active');
+            document.getElementById('btn-' + tabName).classList.add('active');
         }
-        else window.location.href = "/Perpustakaan/frontend/login.html"
-;
-    };
-</script>
+
+        function showDashboard() {
+            document.getElementById('main-content').style.display = 'block';
+            loadBuku(); loadAnggota(); loadPeminjaman();
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            window.location.href = "/Perpustakaan/frontend/index.html";
+        }
+
+        async function prosesKembali(id) {
+            await fetch(`${BASE_URL}/pengembalian`, { 
+                method: 'POST', 
+                headers: HEADERS, 
+                body: JSON.stringify({ id_peminjaman: id }) 
+            });
+            loadPeminjaman();
+        }
+
+        // === FUNGSI HAPUS BARU (TAMBAHAN) ===
+        async function hapusBuku(id) {
+    if (!confirm("Yakin ingin menghapus buku ini?")) return;
+
+    try {
+        const res = await fetch(`${BASE_URL}/buku/${id}`, {
+            method: 'DELETE',
+            headers: HEADERS
+        });
+
+        if (res.ok) {
+            loadBuku();
+        } else {
+            const errText = await res.text();
+            console.error("Gagal hapus buku:", errText);
+            alert("Gagal menghapus buku. Cek konsol untuk detail.");
+        }
+    } catch (err) {
+        console.error("Error saat hapus buku:", err);
+        alert("Tidak bisa terhubung ke server. Pastikan backend berjalan!");
+    }
+}
+
+
+        async function hapusAnggota(id) {
+    if (!confirm("Yakin ingin menghapus anggota ini?")) return;
+
+    try {
+        const res = await fetch(`${BASE_URL}/anggota/${id}`, {
+            method: 'DELETE',
+            headers: HEADERS
+        });
+
+        if (res.ok) {
+            loadAnggota();
+        } else {
+            const errText = await res.text();
+            console.error("Gagal hapus anggota:", errText);
+            alert("Gagal menghapus anggota. Cek konsol untuk detail.");
+        }
+    } catch (err) {
+        console.error("Error saat hapus anggota:", err);
+        alert("Tidak bisa terhubung ke server. Pastikan backend berjalan!");
+    }
+}
+
+        async function hapusPeminjaman(id) {
+            if (!confirm("Yakin ingin menghapus transaksi ini?")) return;
+            await fetch(`${BASE_URL}/peminjaman/${id}`, { method: 'DELETE', headers: HEADERS });
+            loadPeminjaman();
+        }
+
+        // === PERBARUI FUNGSI LOAD DENGAN TOMBOL HAPUS (MENGGANTIKAN VERSI LAMA) ===
+        async function loadBuku() {
+            const res = await fetch(`${BASE_URL}/buku`, { headers: HEADERS });
+            const data = await res.json();
+            document.querySelector('#tabelBuku tbody').innerHTML = data.map(b => 
+                `<tr>
+                    <td>${b.id}</td>
+                    <td>${b.judul}</td>
+                    <td>${b.stok}</td>
+                    <td><button onclick="hapusBuku(${b.id})" class="bg-red-600 text-white p-1 rounded-md" style="font-size:0.85em;">Hapus</button></td>
+                </tr>`).join('');
+        }
+
+        async function loadAnggota() {
+            const res = await fetch(`${BASE_URL}/anggota`, { headers: HEADERS });
+            const data = await res.json();
+            document.querySelector('#tabelAnggota tbody').innerHTML = data.map(a => 
+                `<tr>
+                    <td>${a.id}</td>
+                    <td>${a.nama}</td>
+                    <td>${a.telepon}</td>
+                    <td>${a.alamat || '-'}</td>
+                    <td><button onclick="hapusAnggota(${a.id})" class="bg-red-600 text-white p-1 rounded-md" style="font-size:0.85em;">Hapus</button></td>
+                </tr>`).join('');
+        }
+
+        async function loadPeminjaman() {
+            const res = await fetch(`${BASE_URL}/peminjaman`, { headers: HEADERS });
+            const data = await res.json();
+            const tbody = document.querySelector('#tabelPeminjaman tbody');
+            tbody.innerHTML = data.map(p => `
+                <tr>
+                    <td>${p.id}</td>
+                    <td>${p.judul_buku}</td>
+                    <td>${p.nama_anggota}</td>
+                    <td>${p.tanggal_pinjam}</td>
+                    <td><span class="p-2 rounded-md ${p.status === 'Dipinjam' ? 'status-dipinjam' : 'status-kembali'}">${p.status}</span></td>
+                    <td>
+                        ${p.status === 'Dipinjam' ? 
+                            `<button onclick="prosesKembali(${p.id})" class="bg-orange-600 text-white p-1 rounded-md mr-1" style="font-size:0.85em;">Kembali</button>` : 
+                            '<span>Selesai</span>'}
+                        <button onclick="hapusPeminjaman(${p.id})" class="bg-red-600 text-white p-1 rounded-md" style="font-size:0.85em;">Hapus</button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        // === FUNGSI INPUT ASLI (TIDAK DIUBAH) ===
+        async function inputBuku() {
+            const judul = document.getElementById('judulBuku').value;
+            const stok = document.getElementById('stokBuku').value;
+            await fetch(`${BASE_URL}/buku`, { method: 'POST', headers: HEADERS, body: JSON.stringify({ judul, stok }) });
+            alert('Buku Disimpan'); loadBuku();
+        }
+
+        async function inputAnggota() {
+            const body = {
+                nama: document.getElementById('namaAnggota').value,
+                alamat: document.getElementById('alamatAnggota').value,
+                telepon: document.getElementById('telpAnggota').value
+            };
+            const res = await fetch(`${BASE_URL}/anggota`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+            if(res.ok) { alert('Anggota Disimpan'); loadAnggota(); }
+        }
+
+        async function inputPeminjaman() {
+            const body = { 
+                id_buku: document.getElementById('idBukuPinjam').value, 
+                id_anggota: document.getElementById('idAnggotaPinjam').value, 
+                tanggal_pinjam: document.getElementById('tglPinjam').value 
+            };
+            await fetch(`${BASE_URL}/peminjaman`, { method: 'POST', headers: HEADERS, body: JSON.stringify(body) });
+            loadPeminjaman();
+        }
+
+        // === LOGIKA NAVIGASI TAB (TIDAK DIUBAH) ===
+        const btnBuku = document.getElementsByClassName('buku')[0];
+        const btnAnggota = document.getElementsByClassName('anggota')[0];
+        const btnPinjam = document.getElementsByClassName('pinjam')[0];
+
+        btnBuku.addEventListener('click', () => {
+            btnBuku.setAttribute("class","buku bg-blue-600 text-white p-2 rounded-md");
+            btnAnggota.setAttribute("class","anggota bg-gray-400 text-white p-2 rounded-md");
+            btnPinjam.setAttribute("class","pinjam bg-gray-400 text-white p-2 rounded-md");
+        });
+
+        btnAnggota.addEventListener('click', () => {
+            btnAnggota.setAttribute("class","anggota bg-blue-600 text-white p-2 rounded-md");
+            btnBuku.setAttribute("class","buku bg-gray-400 text-white p-2 rounded-md");
+            btnPinjam.setAttribute("class","pinjam bg-gray-400 text-white p-2 rounded-md");
+        });
+
+        btnPinjam.addEventListener('click', () => {
+            btnPinjam.setAttribute("class","pinjam bg-blue-600 text-white p-2 rounded-md");
+            btnAnggota.setAttribute("class","anggota bg-gray-400 text-white p-2 rounded-md");
+            btnBuku.setAttribute("class","buku bg-gray-400 text-white p-2 rounded-md");
+        });
+
+        // === ONLOAD (TIDAK DIUBAH) ===
+        window.onload = () => {
+            if(sessionStorage.getItem('session_petugas')) {
+                showDashboard();
+                document.getElementById("name").innerText = "Halo " + sessionStorage.getItem('session_petugas');
+            } else {
+                window.location.href = "/Perpustakaan/frontend/login.html";
+            }
+        };
+    </script>
 </body>
 </html>

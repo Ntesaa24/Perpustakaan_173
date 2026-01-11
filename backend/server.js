@@ -40,13 +40,34 @@ db.serialize(() => {
         FOREIGN KEY(id_buku) REFERENCES buku(id),
         FOREIGN KEY(id_anggota) REFERENCES anggota(id)
     )`);
+
+    // Tambahkan ini di dalam db.serialize()
+    db.run(`CREATE TABLE IF NOT EXISTS anggota_login (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT,
+        api_key TEXT,
+        id_anggota INTEGER,
+        FOREIGN KEY(id_anggota) REFERENCES anggota(id)
+    )`);
 });
 
 // 2. AUTH MIDDLEWARE (API Key)
-const API_KEY = process.env.API_KEY;
+// Update Middleware agar lebih fleksibel
 const authenticate = (req, res, next) => {
-    if (req.headers['x-api-key'] === API_KEY) return next();
-    res.status(401).json({ message: "Invalid API Key" });
+    const clientKey = req.headers['x-api-key'];
+    const masterKey = process.env.API_KEY || 'rahasia123';
+
+    // 1. Cek jika menggunakan Master Key (Petugas)
+    if (clientKey === masterKey) return next();
+
+    // 2. Cek jika menggunakan User API Key (Anggota) dari database
+    db.get("SELECT * FROM anggota_login WHERE api_key = ?", [clientKey], (err, row) => {
+        if (!err && row) {
+            return next();
+        }
+        res.status(401).json({ message: "Invalid API Key" });
+    });
 };
 
 // 3. APPLICATION LAYER (Logic & CRUD)
@@ -146,5 +167,183 @@ app.post('/api/pengembalian', authenticate, (req, res) => {
         }
     });
 });
+
+
+// --- REGISTER ANGGOTA BARU ---
+app.post('/api/register-user',authenticate, (req, res) => {
+    // Ambil data dari req.body (Pastikan nama variabel sesuai dengan payload HTML)
+    const { nama, telepon, username, password, alamat } = req.body;
+
+    // Validasi data minimal
+    if (!nama || !username || !password) {
+        return res.status(400).json({ message: "Nama, Username, dan Password wajib diisi!" });
+    }
+
+    db.serialize(() => {
+        // 1. Simpan profil ke tabel 'anggota'
+        // Gunakan alamat || "" agar tidak error jika alamat kosong di form
+        db.run("INSERT INTO anggota (nama, alamat, telepon) VALUES (?, ?, ?)", [nama, alamat || "", telepon], function(err) {
+            if (err) return res.status(500).json({ message: "Gagal menyimpan data anggota" });
+
+            const idAnggota = this.lastID;
+            const hashedPassword = bcrypt.hashSync(password, 10);
+            const userApiKey = 'user-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+            // 2. Simpan kredensial ke tabel 'anggota_login'
+            db.run("INSERT INTO anggota_login (username, password, api_key, id_anggota) VALUES (?, ?, ?, ?)", 
+            [username, hashedPassword, userApiKey, idAnggota], function(err) {
+                if (err) return res.status(400).json({ message: "Username sudah digunakan!" });
+                
+                res.status(201).json({ 
+                    message: "Registrasi Berhasil", 
+                    apiKey: userApiKey 
+                });
+            });
+        });
+    });
+});
+
+
+// --- TAMBAHKAN ENDPOINT loginUser ---
+app.post('/api/login-user', authenticate, (req, res) => {
+    const { username, password, newApiKey } = req.body;
+
+    db.get("SELECT * FROM anggota_login WHERE username = ?", [username], (err, user) => {
+        if (err || !user) {
+            return res.status(401).json({ message: "Username tidak ditemukan" });
+        }
+
+        const isMatch = bcrypt.compareSync(password, user.password);
+        if (!isMatch) return res.status(401).json({ message: "Password salah!" });
+
+        // Gunakan key dari frontend jika ada, jika tidak buat baru
+        const finalKey = newApiKey || 'user-' + Math.random().toString(36).substr(2, 9).toUpperCase();
+
+        // Simpan key ke database
+        db.run("UPDATE anggota_login SET api_key = ? WHERE username = ?", [finalKey, username], (updateErr) => {
+            if (updateErr) return res.status(500).json({ message: "Gagal menyimpan API Key" });
+
+            res.json({ 
+                message: "Login Berhasil", 
+                username: user.username,
+                apiKey: finalKey 
+            });
+        });
+    });
+});
+
+// Endpoint untuk mengambil data peminjaman milik user tertentu
+// Endpoint untuk mengambil data peminjaman milik user tertentu
+// Endpoint untuk mengambil data peminjaman milik user tertentu
+// Endpoint untuk mengambil data peminjaman milik user tertentu
+app.get('/api/dashboardUser', (req, res) => {
+    const apiKey = req.headers['x-api-key'];
+    const username = req.headers['user-session']; // ini sebenarnya nama lengkap dari frontend
+
+    if (!apiKey || !username) {
+        return res.status(401).json({ message: "Header x-api-key dan user-session wajib diisi!" });
+    }
+
+    // Cari id_anggota berdasarkan NAMA (karena frontend kirim nama lengkap sebagai 'user-session')
+    db.get("SELECT id FROM anggota WHERE nama = ?", [username], (err, row) => {
+        if (err || !row) {
+            console.log("Nama tidak ditemukan:", username);
+            return res.status(404).json({ message: "Nama anggota tidak ditemukan" });
+        }
+
+        const idAnggota = row.id;
+
+        // Ambil data peminjaman
+        const query = `
+            SELECT 
+                a.nama AS nama,
+                b.judul AS judul,
+                p.status AS status
+            FROM peminjaman p
+            JOIN buku b ON p.id_buku = b.id
+            JOIN anggota a ON p.id_anggota = a.id
+            WHERE p.id_anggota = ?`;
+
+        db.all(query, [idAnggota], (err, rows) => {
+            if (err) {
+                console.error("Error:", err.message);
+                return res.status(500).json({ message: "Gagal ambil data" });
+            }
+            res.json(rows);
+        });
+    });
+});
+
+
+// --- HAPUS BUKU ---
+app.delete('/api/buku/:id', authenticate, (req, res) => {
+    const id = req.params.id;
+
+    // Cek apakah buku sedang dipinjam
+    db.get("SELECT COUNT(*) as count FROM peminjaman WHERE id_buku = ? AND status = 'Dipinjam'", [id], (err, row) => {
+        if (err) return res.status(500).json({ message: "Error saat mengecek peminjaman" });
+        
+        if (row.count > 0) {
+            return res.status(400).json({ message: "Tidak bisa dihapus: buku sedang dipinjam!" });
+        }
+
+        // Hapus dari tabel buku
+        db.run("DELETE FROM buku WHERE id = ?", [id], function(err) {
+            if (err) return res.status(500).json({ message: "Gagal menghapus buku" });
+            if (this.changes === 0) {
+                return res.status(404).json({ message: "Buku tidak ditemukan" });
+            }
+            res.json({ message: "Buku berhasil dihapus" });
+        });
+    });
+});
+
+// --- HAPUS ANGGOTA ---
+app.delete('/api/anggota/:id', authenticate, (req, res) => {
+    const id = req.params.id;
+
+    // Cek apakah anggota sedang meminjam buku
+    db.get("SELECT COUNT(*) as count FROM peminjaman WHERE id_anggota = ? AND status = 'Dipinjam'", [id], (err, row) => {
+        if (err) return res.status(500).json({ message: "Error saat mengecek peminjaman" });
+        
+        if (row.count > 0) {
+            return res.status(400).json({ message: "Tidak bisa dihapus: anggota masih punya pinjaman aktif!" });
+        }
+
+        // Hapus dari tabel anggota
+        db.run("DELETE FROM anggota WHERE id = ?", [id], function(err) {
+            if (err) return res.status(500).json({ message: "Gagal menghapus anggota" });
+            if (this.changes === 0) {
+                return res.status(404).json({ message: "Anggota tidak ditemukan" });
+            }
+            res.json({ message: "Anggota berhasil dihapus" });
+        });
+    });
+});
+
+// --- HAPUS PEMINJAMAN ---
+app.delete('/api/peminjaman/:id', authenticate, (req, res) => {
+    const id = req.params.id;
+
+    // Ambil data peminjaman untuk kembalikan stok jika perlu
+    db.get("SELECT id_buku, status FROM peminjaman WHERE id = ?", [id], (err, row) => {
+        if (err) return res.status(500).json({ message: "Error saat mengambil data peminjaman" });
+        if (!row) return res.status(404).json({ message: "Peminjaman tidak ditemukan" });
+
+        db.serialize(() => {
+            // Jika status "Dipinjam", kembalikan stok buku
+            if (row.status === 'Dipinjam') {
+                db.run("UPDATE buku SET stok = stok + 1 WHERE id = ?", [row.id_buku]);
+            }
+
+            // Hapus transaksi peminjaman
+            db.run("DELETE FROM peminjaman WHERE id = ?", [id], function(err) {
+                if (err) return res.status(500).json({ message: "Gagal menghapus peminjaman" });
+                res.json({ message: "Transaksi peminjaman berhasil dihapus" });
+            });
+        });
+    });
+});
+
 
 app.listen(3000, () => console.log('Server Backend aktif di port 3000'));

@@ -12,6 +12,7 @@ db.serialize(() => {
     db.run("DROP TABLE IF EXISTS pengembalian");
     db.run("DROP TABLE IF EXISTS peminjaman");
     db.run("DROP TABLE IF EXISTS anggota");
+    db.run("DROP TABLE IF EXISTS anggota_login");
     db.run("DROP TABLE IF EXISTS buku");
     console.log("1. Database lama telah dibersihkan.");
 
@@ -50,7 +51,22 @@ db.serialize(() => {
         FOREIGN KEY (id_peminjaman) REFERENCES peminjaman(id)
     )`);
 
-    console.log("2. Semua tabel (4) berhasil dibuat dengan struktur terbaru!");
+// 6. Membuat Tabel Anggota Login (Akun untuk User/Anggota)
+    // Tabel ini menghubungkan kredensial login dengan profil di tabel anggota
+    db.run(`CREATE TABLE anggota_login (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        api_key TEXT,
+        id_anggota INTEGER,
+        FOREIGN KEY (id_anggota) REFERENCES anggota(id)
+    )`);
+
+
+
+    console.log("2. Semua tabel (6) berhasil dibuat dengan struktur terbaru!");
+    console.log("   - Tabel Bisnis: buku, anggota, peminjaman, pengembalian");
+    console.log("   - Tabel Auth: petugas, anggota_login");
 });
 
 db.close((err) => {
